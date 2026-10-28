@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Turo Trip Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f6f4ef; --panel:#ffffff; --ink:#1d2321; --muted:#66706c; --line:#e3e0d8;
+  --accent:#0f7a6b; --accent-ink:#ffffff; --pos:#0f7a6b; --neg:#b4472e; --chip:#eef4f2;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121615; --panel:#1b2120; --ink:#e8ece9; --muted:#9aa5a1; --line:#2c3533;
+    --accent:#3fb8a3; --accent-ink:#0c1312; --pos:#5fd0bb; --neg:#ef8a6f; --chip:#1f2b29;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121615; --panel:#1b2120; --ink:#e8ece9; --muted:#9aa5a1; --line:#2c3533;
+  --accent:#3fb8a3; --accent-ink:#0c1312; --pos:#5fd0bb; --neg:#ef8a6f; --chip:#1f2b29;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Inter,system-ui,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 16px 60px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between;margin-bottom:20px}
+h1{font-size:26px;margin:0;letter-spacing:-.02em}
+.sub{color:var(--muted);font-size:13px;margin-top:4px}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+button,.filebtn{font:inherit;font-size:13px;font-weight:600;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:8px 12px;border-radius:8px;cursor:pointer}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.danger{color:var(--neg)}
+.filebtn input{display:none}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:20px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.stat .k{font-size:12px;color:var(--muted)}
+.stat .v{font:600 20px 'JetBrains Mono',monospace;margin-top:2px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:20px}
+.panel h2{font-size:16px;margin:0 0 12px}
+fieldset{border:0;padding:0;margin:0 0 14px}
+legend{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+input,select{font:inherit;font-size:14px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%}
+.check{flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-size:14px;padding-top:20px}
+.check input{width:auto}
+.preview{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px}
+.chip{background:var(--chip);border-radius:999px;padding:5px 10px;font-size:12px}
+.chip b{font-family:'JetBrains Mono',monospace}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:13px;min-width:900px}
+th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--panel);position:sticky;top:0}
+th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}
+td.num{font-family:'JetBrains Mono',monospace}
+td.net{font-weight:700;color:var(--pos)}
+td.net.neg{color:var(--neg)}
+.rowbtns button{padding:4px 8px;font-size:12px}
+.empty{padding:30px;text-align:center;color:var(--muted)}
+.note{font-size:12px;color:var(--muted);margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Turo Trip Tracker</h1>
+      <div class="sub">Log each trip's earnings, guest charges, reimbursements and costs. Data saves in this browser — export a backup regularly.</div>
+    </div>
+    <div class="btns">
+      <button id="exportCsv">Export CSV</button>
+      <button id="exportJson">Backup (JSON)</button>
+      <label class="filebtn">Restore backup<input type="file" id="importJson" accept="application/json"></label>
+    </div>
+  </header>
+
+  <section class="stats" id="stats"></section>
+
+  <section class="panel">
+    <h2 id="formTitle">Add a trip</h2>
+    <form id="tripForm" autocomplete="off">
+      <fieldset>
+        <legend>Trip</legend>
+        <div class="grid">
+          <label>Guest / trip ID<input name="guest" placeholder="e.g. Sarah K. #48213"></label>
+          <label>Start date<input type="date" name="start" required></label>
+          <label>End date<input type="date" name="end" required></label>
+          <label>Days (auto, editable)<input type="number" name="days" min="0" step="0.5"></label>
+          <label>Daily rate ($)<input type="number" name="rate" min="0" step="0.01" required></label>
+          <label>Discount (%)<input type="number" name="discount" min="0" max="100" step="1" value="0"></label>
+          <label>Host share (%)<input type="number" name="share" min="0" max="100" step="1"></label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Delivery &amp; Extras (host share applies)</legend>
+        <div class="grid">
+          <label>Delivery fee ($)<input type="number" name="delivery" min="0" step="0.01" value="0"></label>
+          <label>Child seats (qty)<input type="number" name="childSeats" min="0" step="1" value="0"></label>
+          <label>Child seat price ($ each)<input type="number" name="childSeatPrice" min="0" step="0.01"></label>
+          <label>Prepaid refuel extra ($)<input type="number" name="prepaidFuel" min="0" step="0.01" value="0"></label>
+          <label>Other extras ($)<input type="number" name="otherExtras" min="0" step="0.01" value="0"></label>
+          <label>Late return fee ($)<input type="number" name="late" min="0" step="0.01" value="0"></label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Reimbursements &amp; fees passed to renter (100% to you)</legend>
+        <div class="grid">
+          <label>Refueling / recharge ($)<input type="number" name="fuel" min="0" step="0.01" value="0"></label>
+          <label>Extra mileage ($)<input type="number" name="miles" min="0" step="0.01" value="0"></label>
+          <label>Tolls ($)<input type="number" name="tolls" min="0" step="0.01" value="0"></label>
+          <label>Tickets ($)<input type="number" name="tickets" min="0" step="0.01" value="0"></label>
+          <label>Cleaning fee ($)<input type="number" name="cleaning" min="0" step="0.01" value="0"></label>
+          <label>Smoking fee ($)<input type="number" name="smoking" min="0" step="0.01" value="0"></label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Collected by Turo from the guest (not your income, record only)</legend>
+        <div class="grid">
+          <label>Airport fee ($)<input type="number" name="airportFee" min="0" step="0.01" value="0"></label>
+          <label>Taxes &amp; surcharges ($)<input type="number" name="taxes" min="0" step="0.01" value="0"></label>
+          <label>Young driver / trip fees ($)<input type="number" name="turoFees" min="0" step="0.01" value="0"></label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Your costs this trip</legend>
+        <div class="grid">
+          <label>HNL parking visits<input type="number" name="hnlVisits" min="0" step="1" value="0"></label>
+          <label>Cleaning supplies / wash ($)<input type="number" name="costClean" min="0" step="0.01" value="0"></label>
+          <label>Delivery gas / rides ($)<input type="number" name="costTravel" min="0" step="0.01" value="0"></label>
+          <label>Repairs / other ($)<input type="number" name="costOther" min="0" step="0.01" value="0"></label>
+        </div>
+      </fieldset>
+      <div class="preview" id="preview"></div>
+      <div class="btns">
+        <button type="submit" class="primary" id="saveBtn">Add trip</button>
+        <button type="button" id="cancelEdit" hidden>Cancel edit</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel">
+    <h2>Defaults</h2>
+    <div class="grid">
+      <label>Default host share (%)<input type="number" id="defShare" min="0" max="100" step="1"></label>
+      <label>Child seat price ($ each)<input type="number" id="defSeat" min="0" step="0.01"></label>
+      <label>HNL parking per visit ($)<input type="number" id="defHnl" min="0" step="0.01"></label>
+    </div>
+    <p class="note">Host share applies to trip price, delivery, Extras and late returns. Fuel, mileage, tolls, tickets, cleaning and smoking reimbursements pay out at 100%. Turo's own trip fee is set by Turo and isn't tracked here unless you enter it.</p>
+  </section>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr>
+        <th>Dates</th><th>Guest</th><th>Days</th><th>Trip price</th><th>Delivery</th><th>Extras</th>
+        <th>Reimb.</th><th>Guest total*</th><th>Your payout</th><th>Costs</th><th>Net</th><th></th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+  <p class="note">*Guest total = everything entered on this page that the renter pays, including Turo-collected fees and taxes. Your payout = host-share items + 100% reimbursements.</p>
+</div>
+
+<script>
+const KEY='turoTracker.v1';
+const DEF_KEY='turoTracker.defaults.v1';
+const $=s=>document.querySelector(s);
+const money=n=>(n<0?'-':'')+'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const num=v=>{const x=parseFloat(v);return isFinite(x)?x:0};
+
+function load(k,fb){try{const v=localStorage.getItem(k);return v?JSON.parse(v):fb}catch(e){return fb}}
+function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+
+let trips=load(KEY,[]);
+let defaults=Object.assign({share:90,seat:20,hnl:14},load(DEF_KEY,{}));
+let editId=null;
+
+const form=$('#tripForm');
+const F=n=>form.elements[n];
+
+function calc(t){
+  const days=num(t.days);
+  const tripPrice=num(t.rate)*days*(1-num(t.discount)/100);
+  const seats=num(t.childSeats)*num(t.childSeatPrice);
+  const extras=seats+num(t.prepaidFuel)+num(t.otherExtras);
+  const delivery=num(t.delivery);
+  const late=num(t.late);
+  const shareBase=tripPrice+delivery+extras+late;
+  const reimb=num(t.fuel)+num(t.miles)+num(t.tolls)+num(t.tickets)+num(t.cleaning)+num(t.smoking);
+  const turoCollected=num(t.airportFee)+num(t.taxes)+num(t.turoFees);
+  const payout=shareBase*num(t.share)/100+reimb;
+  const costs=num(t.hnlVisits)*num(t.hnlRate??defaults.hnl)+num(t.costClean)+num(t.costTravel)+num(t.costOther);
+  return {days,tripPrice,seats,extras,delivery,late,reimb,turoCollected,
+    guestTotal:shareBase+reimb+turoCollected,payout,costs,net:payout-costs};
+}
+
+function daysBetween(a,b){
+  if(!a||!b)return '';
+  const d=(new Date(b)-new Date(a))/86400000;
+  return d>=0?Math.max(1,Math.round(d)):'';
+}
+
+function formData(){
+  const o={};
+  for(const el of form.elements){if(el.name)o[el.name]=el.value}
+  o.hnlRate=defaults.hnl;
+  return o;
+}
+
+function updatePreview(){
+  const c=calc(formData());
+  $('#preview').innerHTML=[
+    ['Trip price',c.tripPrice],['Extras',c.extras],['Reimbursements',c.reimb],
+    ['Guest total',c.guestTotal],['Your payout',c.payout],['Costs',c.costs],['Net',c.net]
+  ].map(([k,v])=>`<span class="chip">${k}: <b>${money(v)}</b></span>`).join('');
+}
+
+function resetForm(){
+  form.reset();
+  F('share').value=defaults.share;
+  F('childSeatPrice').value=defaults.seat;
+  editId=null;
+  $('#formTitle').textContent='Add a trip';
+  $('#saveBtn').textContent='Add trip';
+  $('#cancelEdit').hidden=true;
+  updatePreview();
+}
+
+function render(){
+  const tb=$('#rows');
+  if(!trips.length){tb.innerHTML='<tr><td colspan="12" class="empty">No trips yet. Add your first one above.</td></tr>'}
+  else{
+    const sorted=[...trips].sort((a,b)=>(b.start||'').localeCompare(a.start||''));
+    tb.innerHTML=sorted.map(t=>{const c=calc(t);return `<tr>
+      <td>${esc(t.start)} → ${esc(t.end)}</td><td>${esc(t.guest||'—')}</td>
+      <td class="num">${c.days}</td><td class="num">${money(c.tripPrice)}</td>
+      <td class="num">${money(c.delivery)}</td><td class="num">${money(c.extras+c.late)}</td>
+      <td class="num">${money(c.reimb)}</td><td class="num">${money(c.guestTotal)}</td>
+      <td class="num">${money(c.payout)}</td><td class="num">${money(c.costs)}</td>
+      <td class="num net ${c.net<0?'neg':''}">${money(c.net)}</td>
+      <td class="rowbtns"><button data-edit="${t.id}">Edit</button> <button class="danger" data-del="${t.id}">Delete</button></td>
+    </tr>`}).join('');
+  }
+  const tot=trips.reduce((a,t)=>{const c=calc(t);a.days+=c.days;a.gross+=c.guestTotal;a.payout+=c.payout;a.costs+=c.costs;a.net+=c.net;a.reimb+=c.reimb;return a},{days:0,gross:0,payout:0,costs:0,net:0,reimb:0});
+  $('#stats').innerHTML=[
+    ['Trips',trips.length,false],['Days booked',tot.days,false],
+    ['Guest charges',tot.gross,true],['Your payout',tot.payout,true],
+    ['Reimbursements',tot.reimb,true],['Costs',tot.costs,true],['Net profit',tot.net,true],
+    ['Net / booked day',tot.days?tot.net/tot.days:0,true]
+  ].map(([k,v,m])=>`<div class="stat"><div class="k">${k}</div><div class="v">${m?money(v):v}</div></div>`).join('');
+}
+
+function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+
+form.addEventListener('input',e=>{
+  if(e.target.name==='start'||e.target.name==='end'){
+    const d=daysBetween(F('start').value,F('end').value);
+    if(d!=='')F('days').value=d;
+  }
+  updatePreview();
+});
+
+form.addEventListener('submit',e=>{
+  e.preventDefault();
+  const t=formData();
+  if(!t.days)t.days=daysBetween(t.start,t.end)||0;
+  if(editId){t.id=editId;trips=trips.map(x=>x.id===editId?t:x)}
+  else{t.id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);trips.push(t)}
+  save(KEY,trips);resetForm();render();
+});
+
+$('#cancelEdit').onclick=resetForm;
+
+$('#rows').addEventListener('click',e=>{
+  const ed=e.target.dataset.edit, del=e.target.dataset.del;
+  if(ed){
+    const t=trips.find(x=>x.id===ed);if(!t)return;
+    for(const el of form.elements){if(el.name&&t[el.name]!==undefined)el.value=t[el.name]}
+    editId=ed;$('#formTitle').textContent='Edit trip';$('#saveBtn').textContent='Save changes';$('#cancelEdit').hidden=false;
+    updatePreview();form.scrollIntoView({behavior:'smooth'});
+  }
+  if(del&&confirm('Delete this trip?')){trips=trips.filter(x=>x.id!==del);save(KEY,trips);render()}
+});
+
+function bindDefault(id,key){
+  const el=$(id);el.value=defaults[key];
+  el.addEventListener('change',()=>{defaults[key]=num(el.value);save(DEF_KEY,defaults);render();updatePreview()});
+}
+bindDefault('#defShare','share');bindDefault('#defSeat','seat');bindDefault('#defHnl','hnl');
+
+function download(name,text,type){
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+$('#exportJson').onclick=()=>download('turo-trips-backup.json',JSON.stringify({trips,defaults},null,2),'application/json');
+$('#exportCsv').onclick=()=>{
+  const cols=['start','end','guest','days','rate','discount','share','delivery','childSeats','childSeatPrice','prepaidFuel','otherExtras','late','fuel','miles','tolls','tickets','cleaning','smoking','airportFee','taxes','turoFees','hnlVisits','costClean','costTravel','costOther'];
+  const calcCols=['tripPrice','extras','reimb','guestTotal','payout','costs','net'];
+  const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+  const lines=[cols.concat(calcCols).join(',')].concat(trips.map(t=>{const c=calc(t);return cols.map(k=>q(t[k])).concat(calcCols.map(k=>c[k].toFixed(2))).join(',')}));
+  download('turo-trips.csv',lines.join('\n'),'text/csv');
+};
+$('#importJson').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{try{const d=JSON.parse(r.result);if(Array.isArray(d.trips)){trips=d.trips;if(d.defaults)defaults=Object.assign(defaults,d.defaults);save(KEY,trips);save(DEF_KEY,defaults);render();resetForm();alert('Backup restored.')}else alert('That file is not a tracker backup.')}catch(err){alert('Could not read that file.')}};
+  r.readAsText(f);e.target.value='';
+});
+
+resetForm();render();
+</script>
+</body>
+</html>
